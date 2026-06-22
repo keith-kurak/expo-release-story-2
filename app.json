@@ -1,6 +1,6 @@
 {
   "expo": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "web": {
@@ -27,7 +27,7 @@
     },
     "extra": {
       "criticalIndex": 0,
-      "isReleased": true
+      "isReleased": false
     },
     "owner": "expo-production"
   }
