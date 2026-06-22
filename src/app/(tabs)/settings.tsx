@@ -2,7 +2,7 @@ import * as Application from 'expo-application';
 import { useObserve } from 'expo-observe';
 import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
-import { Picker } from '@expo/ui';
+import { Picker } from '@expo/ui/community/picker';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
