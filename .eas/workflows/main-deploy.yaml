@@ -11,6 +11,7 @@ jobs:
     outputs:
       is_released: ${{ steps.check.outputs.is_released }}
       app_version: ${{ steps.check.outputs.app_version }}
+      runtime_version: ${{ steps.check.outputs.runtime_version }}
     steps:
       - uses: eas/checkout
       - id: check
@@ -18,9 +19,12 @@ jobs:
         run: |
           IS_RELEASED=$(jq -r '.expo.extra.isReleased' app.json)
           APP_VERSION=$(jq -r '.expo.version' app.json)
-          echo "isReleased: $IS_RELEASED, version: $APP_VERSION"
+          MAJOR_MINOR=$(echo "$APP_VERSION" | cut -d. -f1-2)
+          RUNTIME_VERSION="${MAJOR_MINOR}.0"
+          echo "isReleased: $IS_RELEASED, version: $APP_VERSION, runtime: $RUNTIME_VERSION"
           set-output is_released "$IS_RELEASED"
           set-output app_version "$APP_VERSION"
+          set-output runtime_version "$RUNTIME_VERSION"
 
   fingerprint:
     name: Fingerprint
@@ -31,20 +35,22 @@ jobs:
 
   get_android_build:
     name: Check existing Android build
-    needs: [fingerprint]
+    needs: [check_release, fingerprint]
     type: get-build
     params:
       platform: android
       fingerprint_hash: ${{ needs.fingerprint.outputs.android_fingerprint_hash }}
+      runtime_version: ${{ needs.check_release.outputs.runtime_version }}
       profile: production
 
   get_ios_build:
     name: Check existing iOS build
-    needs: [fingerprint]
+    needs: [check_release, fingerprint]
     type: get-build
     params:
       platform: ios
       fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      runtime_version: ${{ needs.check_release.outputs.runtime_version }}
       profile: production
 
   # === PRE-RELEASE: build or repack ===
@@ -112,10 +118,41 @@ jobs:
 
   # === RELEASED: OTA update if runtime matches ===
 
-  resolve_version:
-    name: Resolve update version
+  get_ios_simulator_build:
+    name: Get iOS simulator build
+    needs: [check_release, fingerprint]
+    if: ${{ needs.check_release.outputs.is_released == 'true' }}
+    type: get-build
+    params:
+      platform: ios
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      runtime_version: ${{ needs.check_release.outputs.runtime_version }}
+      profile: production-simulator
+
+  build_ios_simulator:
+    name: Build iOS simulator
+    needs: [check_release, get_ios_simulator_build]
+    if: ${{ needs.check_release.outputs.is_released == 'true' && !needs.get_ios_simulator_build.outputs.build_id }}
+    type: build
+    env:
+      APP_VERSION: ${{ needs.check_release.outputs.app_version }}
+    params:
+      platform: ios
+      profile: production-simulator
+
+  maestro_test:
+    name: Smoke test
+    after: [get_ios_simulator_build, build_ios_simulator]
     needs: [check_release, get_android_build, get_ios_build]
     if: ${{ needs.check_release.outputs.is_released == 'true' && needs.get_android_build.outputs.build_id && needs.get_ios_build.outputs.build_id }}
+    type: maestro
+    params:
+      build_id: ${{ needs.build_ios_simulator.outputs.build_id || needs.get_ios_simulator_build.outputs.build_id }}
+      flow_path: maestro/smoke-test.yaml
+
+  resolve_version:
+    name: Resolve update version
+    needs: [check_release, maestro_test]
     outputs:
       next_version: ${{ steps.compute.outputs.next_version }}
     env:
@@ -153,6 +190,6 @@ jobs:
       - name: Block deployment
         run: |
           echo "Native runtime changes detected while app is in released state."
-          echo "The fingerprint does not match any existing production build."
+          echo "No production build matches this fingerprint and runtime version."
           echo "Set isReleased to false in app.json to allow native changes."
           exit 1
