@@ -72,7 +72,7 @@ jobs:
     needs: [build_android, build_ios]
     type: update
     params:
-      branch: pr-${{ github.event.pull_request.number }}
+      channel: pr-${{ github.event.pull_request.number }}
 
   comment:
     name: Post testing instructions

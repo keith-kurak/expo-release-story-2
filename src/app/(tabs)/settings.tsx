@@ -2,6 +2,7 @@ import * as Application from 'expo-application';
 import { useObserve } from 'expo-observe';
 import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
+import { Picker } from '@expo/ui';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,7 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useUpdateMonitor } from '@/hooks/use-update-monitor';
 
-const CHANNELS = ['production', 'staging'] as const;
+const CHANNELS = ['production', 'pr-1', 'pr-2', 'pr-3'] as const;
 
 function InfoRow({ label, value }: { label: string; value: string | undefined }) {
   return (
@@ -44,16 +45,19 @@ export default function SettingsScreen() {
   const [activeChannel, setActiveChannel] = useState(
     Updates.channel ?? 'production'
   );
+  const [selectedChannel, setSelectedChannel] = useState(activeChannel);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  const switchChannel = async (channel: string) => {
-    if (channel === activeChannel) return;
+  const hasPendingSwitch = selectedChannel !== activeChannel;
+
+  const switchChannel = async () => {
+    if (!hasPendingSwitch) return;
     setIsSwitching(true);
     try {
       Updates.setUpdateRequestHeadersOverride({
-        'expo-channel-name': channel,
+        'expo-channel-name': selectedChannel,
       });
-      setActiveChannel(channel);
+      setActiveChannel(selectedChannel);
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
     } catch {
@@ -112,37 +116,37 @@ export default function SettingsScreen() {
 
           <View style={styles.section}>
             <ThemedText type="smallBold" themeColor="textSecondary">
-              CHANNEL
+              CHANNEL SURFING
             </ThemedText>
             <InfoRow label="Current channel" value={activeChannel} />
-            <View style={styles.channelButtons}>
+            <Picker
+              selectedValue={selectedChannel}
+              onValueChange={setSelectedChannel}
+              enabled={!isSwitching}
+            >
               {CHANNELS.map((channel) => (
-                <Pressable
-                  key={channel}
-                  style={({ pressed }) => [
-                    styles.channelButton,
-                    channel === activeChannel && styles.channelButtonActive,
-                    pressed && styles.buttonPressed,
-                    isSwitching && styles.buttonDisabled,
-                  ]}
-                  onPress={() => switchChannel(channel)}
-                  disabled={isSwitching || channel === activeChannel}
-                >
-                  {isSwitching ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <ThemedText
-                      style={[
-                        styles.channelButtonText,
-                        channel === activeChannel && styles.channelButtonTextActive,
-                      ]}
-                    >
-                      {channel}
-                    </ThemedText>
-                  )}
-                </Pressable>
+                <Picker.Item key={channel} label={channel} value={channel} />
               ))}
-            </View>
+            </Picker>
+            {hasPendingSwitch && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  pressed && styles.buttonPressed,
+                  isSwitching && styles.buttonDisabled,
+                ]}
+                onPress={switchChannel}
+                disabled={isSwitching}
+              >
+                {isSwitching ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.buttonText}>
+                    Switch to {selectedChannel}
+                  </ThemedText>
+                )}
+              </Pressable>
+            )}
           </View>
 
           <Pressable
@@ -202,29 +206,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
-  },
-  channelButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
-  },
-  channelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#208AEF',
-  },
-  channelButtonActive: {
-    backgroundColor: '#208AEF',
-  },
-  channelButtonText: {
-    color: '#208AEF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  channelButtonTextActive: {
-    color: '#fff',
   },
 });
