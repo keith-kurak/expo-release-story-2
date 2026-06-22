@@ -27,7 +27,7 @@
     },
     "extra": {
       "criticalIndex": 0,
-      "isReleased": true
+      "isReleased": false
     },
     "owner": "expo-production"
   }
