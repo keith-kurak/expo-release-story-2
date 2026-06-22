@@ -6,7 +6,7 @@ const brands = {
     bundleIdentifier: "com.keith-kurak.release-story-2",
     package: "com.keithkurak.releasestory2",
     assets: "./assets/brands/food-for-me",
-    easProjectId: "99fffa03-c324-4031-842a-146c10a18374",
+    easProjectId: "b1948e46-b2bb-46df-9dc4-70460f320ea7",
   },
   "food-for-my-pet": {
     name: "Food for My Pet",
