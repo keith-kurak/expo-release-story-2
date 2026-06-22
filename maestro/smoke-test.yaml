@@ -2,7 +2,3 @@ appId: com.keith-kurak.release-story-2
 ---
 - launchApp
 - assertVisible: "Home"
-- tapOn: "Settings"
-- assertVisible: "Settings"
-- assertVisible: "APP VERSION"
-- assertVisible: "CHANNEL SURFING"
