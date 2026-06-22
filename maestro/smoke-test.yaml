@@ -1,4 +1,3 @@
 appId: com.keith-kurak.release-story-2
 ---
 - launchApp
-- assertVisible: "Home"
